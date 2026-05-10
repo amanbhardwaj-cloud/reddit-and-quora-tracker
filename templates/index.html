@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit & Quora Engagement Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-dark: #0f0f10;
+            --bg-card: #1a1a1d;
+            --bg-hover: #242429;
+            --border: #2a2a2f;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --orange: #ff6b35;
+            --red: #ef4444;
+            --green: #10b981;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+            --yellow: #f59e0b;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+        
+        /* SIDEBAR */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--orange), #ff8c5a);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        
+        .nav-item.active {
+            background: rgba(255, 107, 53, 0.15);
+            color: var(--orange);
+        }
+        
+        .nav-item i { width: 20px; }
+        
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px;
+            background: var(--bg-hover);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        /* MAIN CONTENT */
+        .main {
+            flex: 1;
+            margin-left: 240px;
+            padding: 24px 32px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--orange);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #ff5722;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+        
+        .btn-danger {
+            background: var(--red);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        /* STATS CARDS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .stat-icon.total { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+        .stat-icon.live { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+        .stat-icon.draft { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+        .stat-icon.pipeline { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
+        .stat-icon.engagement { background: rgba(255, 107, 53, 0.15); color: var(--orange); }
+        
+        .stat-info h3 {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .stat-info p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        
+        /* FILTERS */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 240px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px 10px 40px;
+            color: var(--text-primary);
+            font-size: 14px;
+            position: relative;
+        }
+        
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+        }
+        
+        .search-wrapper i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        
+        .search-wrapper input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px 10px 40px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .filter-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 140px;
+        }
+        
+        /* TABLE */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: var(--bg-hover);
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        
+        tr:hover { background: var(--bg-hover); }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge.reddit { background: rgba(255, 69, 0, 0.15); color: #ff6b35; }
+        .badge.quora { background: rgba(185, 46, 39, 0.15); color: #ef4444; }
+        .badge.live { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+        .badge.draft { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+        .badge.completed { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+        .badge.picked { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+        .badge.not-picked { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); }
+        .badge.in-progress { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+        
+        .owner-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .owner-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .icon-btn:hover { color: var(--text-primary); background: var(--bg-dark); }
+        .icon-btn.delete:hover { color: var(--red); border-color: var(--red); }
+        
+        .editable-input {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 80px;
+        }
+        
+        .editable-input:hover, .editable-input:focus {
+            border-color: var(--border);
+            background: var(--bg-dark);
+            outline: none;
+        }
+        
+        .link-btn {
+            color: var(--blue);
+            text-decoration: none;
+            font-size: 13px;
+        }
+        
+        .link-btn:hover { text-decoration: underline; }
+        
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.active { display: flex; }
+        
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        
+        /* TABS */
+        .view-tabs {
+            display: none;
+        }
+        
+        .view-tabs.active {
+            display: block;
+        }
+        
+        /* CHARTS */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .chart-card h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+        }
+        
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--green);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .toast.active { display: flex; }
+        .toast.error { background: var(--red); }
+        
+        /* TRUNCATE */
+        .truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 280px;
+            display: block;
+        }
+        
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 16px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+        
+        .seed-banner {
+            background: linear-gradient(135deg, var(--orange), #ff8c5a);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .seed-banner.hidden { display: none; }
+    </style>
+</head>
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">S</div>
+            <div class="logo-text">Spyne</div>
+        </div>
+        
+        <nav>
+            <div class="nav-item active" onclick="switchView('dashboard')">
+                <i class="fas fa-chart-line"></i>
+                Dashboard
+            </div>
+            <div class="nav-item" onclick="switchView('engagements')">
+                <i class="fas fa-list"></i>
+                Engagements
+            </div>
+            <div class="nav-item" onclick="switchView('pipeline')">
+                <i class="fas fa-stream"></i>
+                Pipeline
+            </div>
+            <div class="nav-item" onclick="switchView('drafts')">
+                <i class="fas fa-pen"></i>
+                Drafts
+            </div>
+            <div class="nav-item" onclick="switchView('reports')">
+                <i class="fas fa-chart-bar"></i>
+                Reports
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <div class="avatar">AB</div>
+            <div>
+                <div style="font-size: 13px; font-weight: 600;">Aman Bhardwaj</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Content</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <!-- SEED BANNER -->
+        <div class="seed-banner" id="seedBanner">
+            <div>
+                <div style="font-weight: 600; margin-bottom: 4px;">🚀 Welcome! Load Your Excel Data</div>
+                <div style="font-size: 13px; opacity: 0.9;">Click below to import 157 engagements + 160 pipeline items + 12 drafts</div>
+            </div>
+            <button class="btn btn-secondary" onclick="seedDatabase()" style="background: white; color: var(--orange);">
+                <i class="fas fa-database"></i> Load Excel Data
+            </button>
+        </div>
+
+        <!-- DASHBOARD VIEW -->
+        <div class="view-tabs active" id="dashboard-view">
+            <div class="header">
+                <h1>Dashboard</h1>
+                <button class="btn btn-primary" onclick="openModal('engagement')">
+                    <i class="fas fa-plus"></i> Add Engagement
+                </button>
+            </div>
+
+            <!-- STATS CARDS -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon total"><i class="fas fa-list"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-total">0</h3>
+                        <p>Total Engagements</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon live"><i class="fas fa-circle-check"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-live">0</h3>
+                        <p>Live</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pipeline"><i class="fas fa-stream"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-pipeline">0</h3>
+                        <p>Pipeline</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon draft"><i class="fas fa-pen"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-drafts">0</h3>
+                        <p>Drafts</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon engagement"><i class="fas fa-fire"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-engagement">0</h3>
+                        <p>Total Upvotes</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WEEKLY/MONTHLY -->
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-card">
+                    <div class="stat-icon total"><i class="fas fa-calendar-week"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-weekly">0</h3>
+                        <p>This Week</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon live"><i class="fas fa-calendar"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-monthly">0</h3>
+                        <p>This Month</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon engagement"><i class="fas fa-eye"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-views">0</h3>
+                        <p>Total Views</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon draft"><i class="fas fa-comments"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-comments">0</h3>
+                        <p>Total Comments</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARTS -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Platform Distribution</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="platformChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Posts by Owner</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="ownerChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Product Distribution</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="productChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Pipeline Status</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="pipelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENGAGEMENTS VIEW -->
+        <div class="view-tabs" id="engagements-view">
+            <div class="header">
+                <h1>All Engagements</h1>
+                <button class="btn btn-primary" onclick="openModal('engagement')">
+                    <i class="fas fa-plus"></i> Add Engagement
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="engagementSearch" placeholder="Search engagements..." oninput="renderEngagements()">
+                </div>
+                <select class="filter-select" id="filterPlatform" onchange="renderEngagements()">
+                    <option value="">All Platforms</option>
+                    <option value="Reddit">Reddit</option>
+                    <option value="Quora">Quora</option>
+                </select>
+                <select class="filter-select" id="filterStatus" onchange="renderEngagements()">
+                    <option value="">All Status</option>
+                    <option value="Live">Live</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Completed">Completed</option>
+                </select>
+                <select class="filter-select" id="filterOwner" onchange="renderEngagements()">
+                    <option value="">All Owners</option>
+                </select>
+            </div>
+
+            <div class="table-container">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Platform</th>
+                                <th>Owner</th>
+                                <th>Product</th>
+                                <th>Month</th>
+                                <th>Views</th>
+                                <th>Upvotes</th>
+                                <th>Comments</th>
+                                <th>Status</th>
+                                <th>Link</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="engagementsTable">
+                            <tr><td colspan="11" class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PIPELINE VIEW -->
+        <div class="view-tabs" id="pipeline-view">
+            <div class="header">
+                <h1>Content Pipeline</h1>
+                <button class="btn btn-primary" onclick="openModal('pipeline')">
+                    <i class="fas fa-plus"></i> Add to Pipeline
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="pipelineSearch" placeholder="Search pipeline..." oninput="renderPipeline()">
+                </div>
+                <select class="filter-select" id="filterPipelineStatus" onchange="renderPipeline()">
+                    <option value="">All Status</option>
+                    <option value="Not Picked">Not Picked</option>
+                    <option value="Picked">Picked</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Live">Live</option>
+                </select>
+                <select class="filter-select" id="filterPipelinePlatform" onchange="renderPipeline()">
+                    <option value="">All Platforms</option>
+                    <option value="Reddit">Reddit</option>
+                    <option value="Quora">Quora</option>
+                </select>
+            </div>
+
+            <div class="table-container">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Content / Topic</th>
+                                <th>Platform</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pipelineTable">
+                            <tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- DRAFTS VIEW -->
+        <div class="view-tabs" id="drafts-view">
+            <div class="header">
+                <h1>Drafts</h1>
+                <button class="btn btn-primary" onclick="openModal('draft')">
+                    <i class="fas fa-plus"></i> Add Draft
+                </button>
+            </div>
+
+            <div class="table-container">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Platform</th>
+                                <th>Subreddit</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="draftsTable">
+                            <tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPORTS VIEW -->
+        <div class="view-tabs" id="reports-view">
+            <div class="header">
+                <h1>Reports & Analytics</h1>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>📊 Weekly Performance</h3>
+                    <div id="weeklyReport" style="padding: 20px;">
+                        <div style="margin-bottom: 12px;">
+                            <span style="color: var(--text-secondary);">Engagements this week:</span>
+                            <strong id="report-weekly" style="font-size: 24px; margin-left: 12px;">0</strong>
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 13px;">Last 7 days activity</div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>📈 Monthly Performance</h3>
+                    <div id="monthlyReport" style="padding: 20px;">
+                        <div style="margin-bottom: 12px;">
+                            <span style="color: var(--text-secondary);">Engagements this month:</span>
+                            <strong id="report-monthly" style="font-size: 24px; margin-left: 12px;">0</strong>
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 13px;">Last 30 days activity</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h3>👥 Owner Performance</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Owner</th>
+                                <th>Posts</th>
+                                <th>Total Views</th>
+                                <th>Total Upvotes</th>
+                                <th>Total Comments</th>
+                                <th>Avg Engagement</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ownerReport"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ENGAGEMENT MODAL -->
+    <div class="modal-overlay" id="engagementModal">
+        <div class="modal">
+            <h2 id="engagementModalTitle">Add Engagement</h2>
+            <input type="hidden" id="engagementId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Platform *</label>
+                    <select class="form-select" id="form-platform">
+                        <option value="Reddit">Reddit</option>
+                        <option value="Quora">Quora</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-select" id="form-status">
+                        <option value="Live">Live</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Title / Topic *</label>
+                <input type="text" class="form-input" id="form-title" placeholder="Post title or topic">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Owner</label>
+                    <input type="text" class="form-input" id="form-owner" placeholder="e.g., Komal">
+                </div>
+                <div class="form-group">
+                    <label>Product Target</label>
+                    <input type="text" class="form-input" id="form-product" placeholder="e.g., Vini AI">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Month</label>
+                <input type="text" class="form-input" id="form-month" placeholder="e.g., May 2026">
+            </div>
+            <div class="form-group">
+                <label>Engagement Link</label>
+                <input type="text" class="form-input" id="form-engagement-link" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>Original Question Link</label>
+                <input type="text" class="form-input" id="form-question-link" placeholder="https://...">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Views</label>
+                    <input type="number" class="form-input" id="form-views" placeholder="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Upvotes</label>
+                    <input type="number" class="form-input" id="form-upvotes" placeholder="0" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Comments</label>
+                <input type="number" class="form-input" id="form-comments" placeholder="0" min="0">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('engagement')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEngagement()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIPELINE MODAL -->
+    <div class="modal-overlay" id="pipelineModal">
+        <div class="modal">
+            <h2 id="pipelineModalTitle">Add to Pipeline</h2>
+            <input type="hidden" id="pipelineId">
+            <div class="form-group">
+                <label>Content / Topic *</label>
+                <textarea class="form-textarea" id="pform-content" placeholder="Describe the content idea..."></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Platform</label>
+                    <select class="form-select" id="pform-platform">
+                        <option value="Reddit">Reddit</option>
+                        <option value="Quora">Quora</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-select" id="pform-status">
+                        <option value="Not Picked">Not Picked</option>
+                        <option value="Picked">Picked</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Live">Live</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Assigned To</label>
+                <input type="text" class="form-input" id="pform-assigned" placeholder="Owner name">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea class="form-textarea" id="pform-notes" placeholder="Any notes..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('pipeline')">Cancel</button>
+                <button class="btn btn-primary" onclick="savePipeline()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRAFT MODAL -->
+    <div class="modal-overlay" id="draftModal">
+        <div class="modal">
+            <h2 id="draftModalTitle">Add Draft</h2>
+            <input type="hidden" id="draftId">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" class="form-input" id="dform-title" placeholder="Draft title">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Platform</label>
+                    <select class="form-select" id="dform-platform">
+                        <option value="Reddit">Reddit</option>
+                        <option value="Quora">Quora</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Subreddit</label>
+                    <input type="text" class="form-input" id="dform-subreddit" placeholder="e.g., r/automation">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Type</label>
+                    <input type="text" class="form-input" id="dform-type" placeholder="e.g., Discussion, Story">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select class="form-select" id="dform-status">
+                        <option value="Draft">Draft</option>
+                        <option value="Ready">Ready</option>
+                        <option value="Posted">Posted</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Content</label>
+                <textarea class="form-textarea" id="dform-content" placeholder="Draft content..." style="min-height: 200px;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('draft')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveDraft()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Saved!</span>
+    </div>
+
+    <script>
+        let allEngagements = [];
+        let allPipeline = [];
+        let allDrafts = [];
+        let charts = {};
+
+        // ===== INIT =====
+        async function init() {
+            await loadAllData();
+            checkSeed();
+        }
+
+        async function checkSeed() {
+            const stats = await fetch('/api/stats').then(r => r.json());
+            if (stats.total > 0) {
+                document.getElementById('seedBanner').classList.add('hidden');
+            }
+        }
+
+        async function loadAllData() {
+            await Promise.all([
+                loadEngagements(),
+                loadPipeline(),
+                loadDrafts(),
+                loadStats()
+            ]);
+        }
+
+        // ===== ENGAGEMENTS =====
+        async function loadEngagements() {
+            const res = await fetch('/api/engagements');
+            allEngagements = await res.json();
+            renderEngagements();
+            updateOwnerFilter();
+        }
+
+        function renderEngagements() {
+            const search = document.getElementById('engagementSearch')?.value.toLowerCase() || '';
+            const platform = document.getElementById('filterPlatform')?.value || '';
+            const status = document.getElementById('filterStatus')?.value || '';
+            const owner = document.getElementById('filterOwner')?.value || '';
+
+            let filtered = allEngagements.filter(e => {
+                if (platform && e.platform !== platform) return false;
+                if (status && e.status !== status) return false;
+                if (owner && e.owner !== owner) return false;
+                if (search) {
+                    const text = (e.title + ' ' + e.owner + ' ' + e.product_target).toLowerCase();
+                    if (!text.includes(search)) return false;
+                }
+                return true;
+            });
+
+            const tbody = document.getElementById('engagementsTable');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-inbox"></i><p>No engagements found</p></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(e => `
+                <tr>
+                    <td><span class="truncate" title="${escapeHtml(e.title)}">${escapeHtml(e.title || '-')}</span></td>
+                    <td><span class="badge ${e.platform.toLowerCase()}"><i class="fab fa-${e.platform.toLowerCase()}"></i> ${e.platform}</span></td>
+                    <td><div class="owner-tag"><div class="owner-avatar">${getInitials(e.owner)}</div>${e.owner || '-'}</div></td>
+                    <td>${e.product_target || '-'}</td>
+                    <td>${e.month || '-'}</td>
+                    <td><input type="number" class="editable-input" value="${e.views}" onchange="updateField(${e.id}, 'views', this.value)"></td>
+                    <td><input type="number" class="editable-input" value="${e.upvotes}" onchange="updateField(${e.id}, 'upvotes', this.value)"></td>
+                    <td><input type="number" class="editable-input" value="${e.comments}" onchange="updateField(${e.id}, 'comments', this.value)"></td>
+                    <td>
+                        <select class="filter-select" style="padding: 4px 8px; font-size: 12px;" onchange="updateField(${e.id}, 'status', this.value)">
+                            <option ${e.status === 'Live' ? 'selected' : ''}>Live</option>
+                            <option ${e.status === 'Draft' ? 'selected' : ''}>Draft</option>
+                            <option ${e.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </td>
+                    <td>${e.engagement_link ? `<a href="${e.engagement_link}" target="_blank" class="link-btn">View →</a>` : '-'}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="icon-btn" onclick="editEngagement(${e.id})"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn delete" onclick="deleteEngagement(${e.id})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateOwnerFilter() {
+            const owners = [...new Set(allEngagements.map(e => e.owner).filter(Boolean))];
+            const select = document.getElementById('filterOwner');
+            if (select) {
+                select.innerHTML = '<option value="">All Owners</option>' + 
+                    owners.map(o => `<option value="${o}">${o}</option>`).join('');
+            }
+        }
+
+        async function updateField(id, field, value) {
+            const data = {};
+            data[field] = field === 'views' || field === 'upvotes' || field === 'comments' ? parseInt(value) : value;
+            await fetch(`/api/engagements/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const idx = allEngagements.findIndex(e => e.id === id);
+            if (idx > -1) allEngagements[idx][field] = data[field];
+            loadStats();
+            showToast('Updated!');
+        }
+
+        function editEngagement(id) {
+            const e = allEngagements.find(x => x.id === id);
+            if (!e) return;
+            document.getElementById('engagementId').value = e.id;
+            document.getElementById('engagementModalTitle').textContent = 'Edit Engagement';
+            document.getElementById('form-platform').value = e.platform;
+            document.getElementById('form-status').value = e.status;
+            document.getElementById('form-title').value = e.title || '';
+            document.getElementById('form-owner').value = e.owner || '';
+            document.getElementById('form-product').value = e.product_target || '';
+            document.getElementById('form-month').value = e.month || '';
+            document.getElementById('form-engagement-link').value = e.engagement_link || '';
+            document.getElementById('form-question-link').value = e.original_question_link || '';
+            document.getElementById('form-views').value = e.views || 0;
+            document.getElementById('form-upvotes').value = e.upvotes || 0;
+            document.getElementById('form-comments').value = e.comments || 0;
+            openModal('engagement', false);
+        }
+
+        async function deleteEngagement(id) {
+            if (!confirm('Delete this engagement?')) return;
+            await fetch(`/api/engagements/${id}`, {method: 'DELETE'});
+            await loadEngagements();
+            loadStats();
+            showToast('Deleted!');
+        }
+
+        async function saveEngagement() {
+            const id = document.getElementById('engagementId').value;
+            const data = {
+                platform: document.getElementById('form-platform').value,
+                status: document.getElementById('form-status').value,
+                title: document.getElementById('form-title').value,
+                owner: document.getElementById('form-owner').value,
+                product_target: document.getElementById('form-product').value,
+                month: document.getElementById('form-month').value,
+                engagement_link: document.getElementById('form-engagement-link').value,
+                original_question_link: document.getElementById('form-question-link').value,
+                views: parseInt(document.getElementById('form-views').value) || 0,
+                upvotes: parseInt(document.getElementById('form-upvotes').value) || 0,
+                comments: parseInt(document.getElementById('form-comments').value) || 0
+            };
+
+            const url = id ? `/api/engagements/${id}` : '/api/engagements';
+            const method = id ? 'PUT' : 'POST';
+
+            await fetch(url, {
+                method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            closeModal('engagement');
+            await loadEngagements();
+            loadStats();
+            showToast(id ? 'Updated!' : 'Added!');
+        }
+
+        // ===== PIPELINE =====
+        async function loadPipeline() {
+            const res = await fetch('/api/pipeline');
+            allPipeline = await res.json();
+            renderPipeline();
+        }
+
+        function renderPipeline() {
+            const search = document.getElementById('pipelineSearch')?.value.toLowerCase() || '';
+            const status = document.getElementById('filterPipelineStatus')?.value || '';
+            const platform = document.getElementById('filterPipelinePlatform')?.value || '';
+
+            let filtered = allPipeline.filter(p => {
+                if (status && p.status !== status) return false;
+                if (platform && p.platform !== platform) return false;
+                if (search && !p.content.toLowerCase().includes(search)) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('pipelineTable');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><p>No pipeline items</p></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(p => `
+                <tr>
+                    <td><span class="truncate" title="${escapeHtml(p.content)}">${escapeHtml(p.content || '-')}</span></td>
+                    <td>${p.platform ? `<span class="badge ${p.platform.toLowerCase()}">${p.platform}</span>` : '-'}</td>
+                    <td>
+                        <select class="filter-select" style="padding: 4px 8px; font-size: 12px;" onchange="updatePipelineField(${p.id}, 'status', this.value)">
+                            <option ${p.status === 'Not Picked' ? 'selected' : ''}>Not Picked</option>
+                            <option ${p.status === 'Picked' ? 'selected' : ''}>Picked</option>
+                            <option ${p.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option ${p.status === 'Live' ? 'selected' : ''}>Live</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="editable-input" style="width: 120px;" value="${p.assigned_to || ''}" onchange="updatePipelineField(${p.id}, 'assigned_to', this.value)" placeholder="Assign..."></td>
+                    <td><input type="text" class="editable-input" style="width: 200px;" value="${p.notes || ''}" onchange="updatePipelineField(${p.id}, 'notes', this.value)" placeholder="Notes..."></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="icon-btn delete" onclick="deletePipeline(${p.id})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function updatePipelineField(id, field, value) {
+            const data = {};
+            data[field] = value;
+            await fetch(`/api/pipeline/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const idx = allPipeline.findIndex(p => p.id === id);
+            if (idx > -1) allPipeline[idx][field] = value;
+            loadStats();
+            showToast('Updated!');
+        }
+
+        async function deletePipeline(id) {
+            if (!confirm('Delete this item?')) return;
+            await fetch(`/api/pipeline/${id}`, {method: 'DELETE'});
+            await loadPipeline();
+            loadStats();
+            showToast('Deleted!');
+        }
+
+        async function savePipeline() {
+            const data = {
+                content: document.getElementById('pform-content').value,
+                platform: document.getElementById('pform-platform').value,
+                status: document.getElementById('pform-status').value,
+                assigned_to: document.getElementById('pform-assigned').value,
+                notes: document.getElementById('pform-notes').value
+            };
+
+            await fetch('/api/pipeline', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            closeModal('pipeline');
+            await loadPipeline();
+            loadStats();
+            showToast('Added!');
+        }
+
+        // ===== DRAFTS =====
+        async function loadDrafts() {
+            const res = await fetch('/api/drafts');
+            allDrafts = await res.json();
+            renderDrafts();
+        }
+
+        function renderDrafts() {
+            const tbody = document.getElementById('draftsTable');
+            if (allDrafts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><p>No drafts</p></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = allDrafts.map(d => `
+                <tr>
+                    <td><span class="truncate" title="${escapeHtml(d.title || d.content)}">${escapeHtml(d.title || d.content?.substring(0, 60) || '-')}</span></td>
+                    <td>${d.platform ? `<span class="badge ${d.platform.toLowerCase()}">${d.platform}</span>` : '-'}</td>
+                    <td>${d.subreddit || '-'}</td>
+                    <td>${d.draft_type || '-'}</td>
+                    <td><span class="badge draft">${d.status || 'Draft'}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="icon-btn delete" onclick="deleteDraft(${d.id})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function deleteDraft(id) {
+            if (!confirm('Delete this draft?')) return;
+            await fetch(`/api/drafts/${id}`, {method: 'DELETE'});
+            await loadDrafts();
+            loadStats();
+            showToast('Deleted!');
+        }
+
+        async function saveDraft() {
+            const data = {
+                title: document.getElementById('dform-title').value,
+                platform: document.getElementById('dform-platform').value,
+                subreddit: document.getElementById('dform-subreddit').value,
+                draft_type: document.getElementById('dform-type').value,
+                status: document.getElementById('dform-status').value,
+                content: document.getElementById('dform-content').value
+            };
+
+            await fetch('/api/drafts', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            closeModal('draft');
+            await loadDrafts();
+            loadStats();
+            showToast('Added!');
+        }
+
+        // ===== STATS & CHARTS =====
+        async function loadStats() {
+            const res = await fetch('/api/stats');
+            const stats = await res.json();
+
+            document.getElementById('stat-total').textContent = stats.total;
+            document.getElementById('stat-live').textContent = stats.live_count;
+            document.getElementById('stat-pipeline').textContent = stats.pipeline_total;
+            document.getElementById('stat-drafts').textContent = stats.drafts_count;
+            document.getElementById('stat-engagement').textContent = stats.total_upvotes;
+            document.getElementById('stat-weekly').textContent = stats.weekly_engagements;
+            document.getElementById('stat-monthly').textContent = stats.monthly_engagements;
+            document.getElementById('stat-views').textContent = stats.total_views;
+            document.getElementById('stat-comments').textContent = stats.total_comments;
+
+            // Reports
+            const reportWeekly = document.getElementById('report-weekly');
+            const reportMonthly = document.getElementById('report-monthly');
+            if (reportWeekly) reportWeekly.textContent = stats.weekly_engagements;
+            if (reportMonthly) reportMonthly.textContent = stats.monthly_engagements;
+
+            renderCharts(stats);
+            renderOwnerReport(stats);
+        }
+
+        function renderCharts(stats) {
+            // Platform Chart
+            renderChart('platformChart', 'doughnut', {
+                labels: ['Reddit', 'Quora'],
+                datasets: [{
+                    data: [stats.reddit_count, stats.quora_count],
+                    backgroundColor: ['#ff6b35', '#ef4444']
+                }]
+            });
+
+            // Owner Chart
+            const ownerLabels = Object.keys(stats.owners_data || {});
+            const ownerCounts = ownerLabels.map(o => stats.owners_data[o].count);
+            renderChart('ownerChart', 'bar', {
+                labels: ownerLabels,
+                datasets: [{
+                    label: 'Posts',
+                    data: ownerCounts,
+                    backgroundColor: '#3b82f6'
+                }]
+            });
+
+            // Product Chart
+            const productLabels = Object.keys(stats.products_data || {});
+            const productCounts = Object.values(stats.products_data || {});
+            renderChart('productChart', 'doughnut', {
+                labels: productLabels,
+                datasets: [{
+                    data: productCounts,
+                    backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ff6b35', '#ec4899']
+                }]
+            });
+
+            // Pipeline Chart
+            renderChart('pipelineChart', 'doughnut', {
+                labels: ['Picked', 'Not Picked'],
+                datasets: [{
+                    data: [stats.pipeline_picked, stats.pipeline_not_picked],
+                    backgroundColor: ['#10b981', '#6b7280']
+                }]
+            });
+        }
+
+        function renderChart(id, type, data) {
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(ctx, {
+                type,
+                data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#9ca3af', padding: 12, font: { size: 11 } }
+                        }
+                    },
+                    scales: type === 'bar' ? {
+                        x: { ticks: { color: '#9ca3af' }, grid: { color: '#2a2a2f' } },
+                        y: { ticks: { color: '#9ca3af' }, grid: { color: '#2a2a2f' } }
+                    } : {}
+                }
+            });
+        }
+
+        function renderOwnerReport(stats) {
+            const tbody = document.getElementById('ownerReport');
+            if (!tbody) return;
+            const data = stats.owners_data || {};
+            tbody.innerHTML = Object.entries(data).map(([owner, d]) => {
+                const avg = d.count > 0 ? Math.round((d.upvotes + d.comments) / d.count) : 0;
+                return `
+                    <tr>
+                        <td><div class="owner-tag"><div class="owner-avatar">${getInitials(owner)}</div>${owner}</div></td>
+                        <td><strong>${d.count}</strong></td>
+                        <td>${d.views}</td>
+                        <td>${d.upvotes}</td>
+                        <td>${d.comments}</td>
+                        <td>${avg}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ===== UI HELPERS =====
+        function switchView(view) {
+            document.querySelectorAll('.view-tabs').forEach(v => v.classList.remove('active'));
+            document.getElementById(view + '-view').classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event?.target?.closest('.nav-item')?.classList.add('active');
+        }
+
+        function openModal(type, reset = true) {
+            if (reset) {
+                if (type === 'engagement') {
+                    document.getElementById('engagementId').value = '';
+                    document.getElementById('engagementModalTitle').textContent = 'Add Engagement';
+                    ['title','owner','product','month','engagement-link','question-link','views','upvotes','comments'].forEach(f => {
+                        const el = document.getElementById('form-' + f);
+                        if (el) el.value = f === 'views' || f === 'upvotes' || f === 'comments' ? '0' : '';
+                    });
+                } else if (type === 'pipeline') {
+                    ['content','assigned','notes'].forEach(f => document.getElementById('pform-' + f).value = '');
+                } else if (type === 'draft') {
+                    ['title','subreddit','type','content'].forEach(f => document.getElementById('dform-' + f).value = '');
+                }
+            }
+            document.getElementById(type + 'Modal').classList.add('active');
+        }
+
+        function closeModal(type) {
+            document.getElementById(type + 'Modal').classList.remove('active');
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const message = document.getElementById('toastMessage');
+            message.textContent = msg;
+            toast.classList.add('active');
+            if (isError) toast.classList.add('error');
+            else toast.classList.remove('error');
+            setTimeout(() => toast.classList.remove('active'), 2000);
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===== SEED =====
+        async function seedDatabase() {
+            showToast('Loading Excel data... please wait');
+            const res = await fetch('/api/seed', {method: 'POST'});
+            const result = await res.json();
+            await loadAllData();
+            document.getElementById('seedBanner').classList.add('hidden');
+            showToast(`Loaded ${result.engagements} engagements!`);
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
