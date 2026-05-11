@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spyne Engagement Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* DARK THEME (default) */
+        :root, [data-theme="dark"] {
+            --bg-dark: #0f0f10; --bg-card: #1a1a1d; --bg-hover: #242429;
+            --border: #2a2a2f; --text-primary: #ffffff; --text-secondary: #9ca3af;
+            --text-muted: #6b7280; --orange: #ff6b35; --red: #ef4444;
+            --green: #10b981; --blue: #3b82f6; --purple: #8b5cf6; --yellow: #f59e0b;
+            --input-bg: #0f0f10;
+        }
+        
+        /* LIGHT THEME */
+        [data-theme="light"] {
+            --bg-dark: #f8fafc; --bg-card: #ffffff; --bg-hover: #f1f5f9;
+            --border: #e2e8f0; --text-primary: #0f172a; --text-secondary: #64748b;
+            --text-muted: #94a3b8; --orange: #ff6b35; --red: #ef4444;
+            --green: #10b981; --blue: #3b82f6; --purple: #8b5cf6; --yellow: #f59e0b;
+            --input-bg: #f8fafc;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; display: flex;
+            transition: background 0.2s, color 0.2s;
+        }
+        .sidebar {
+            width: 240px; background: var(--bg-card); border-right: 1px solid var(--border);
+            padding: 20px; display: flex; flex-direction: column; position: fixed;
+            height: 100vh; z-index: 100; overflow-y: auto;
+        }
+        .logo { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 24px; }
+        .logo-icon {
+            width: 40px; height: 40px; background: linear-gradient(135deg, var(--orange), #ff8c5a);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 20px; color: white;
+        }
+        .logo-text { font-size: 20px; font-weight: bold; }
+        .nav-section { margin-bottom: 18px; }
+        .nav-label {
+            font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+            letter-spacing: 1px; padding: 0 16px 8px; font-weight: 600;
+        }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+            border-radius: 8px; cursor: pointer; color: var(--text-secondary);
+            transition: all 0.2s; margin-bottom: 2px; font-size: 14px; font-weight: 500;
+        }
+        .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(255, 107, 53, 0.15); color: var(--orange); }
+        .nav-item.reddit-nav.active { background: rgba(255, 69, 0, 0.15); color: #ff6b35; }
+        .nav-item.quora-nav.active { background: rgba(185, 46, 39, 0.15); color: #ef4444; }
+        .nav-item i { width: 18px; font-size: 13px; }
+        .sidebar-footer {
+            margin-top: auto; padding: 14px; background: var(--bg-hover);
+            border-radius: 8px; display: flex; align-items: center; gap: 10px;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .sidebar-footer:hover { background: var(--border); }
+        .avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 14px; color: white; flex-shrink: 0;
+        }
+        .main { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
+            gap: 12px; flex-wrap: wrap;
+        }
+        .header h1 { font-size: 28px; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        .btn {
+            padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer;
+            font-weight: 600; font-size: 14px; display: inline-flex;
+            align-items: center; gap: 8px; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--orange); color: white; }
+        .btn-primary:hover { background: #ff5722; }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-hover); }
+        .btn-danger { background: var(--red); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .theme-toggle {
+            background: var(--bg-card); border: 1px solid var(--border);
+            color: var(--text-primary); width: 40px; height: 40px;
+            border-radius: 8px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .theme-toggle:hover { background: var(--bg-hover); }
+
+        .fold { margin-bottom: 32px; }
+        .fold-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+            padding-bottom: 12px; border-bottom: 2px solid var(--border);
+        }
+        .fold-header h2 {
+            font-size: 18px; font-weight: 700; display: flex;
+            align-items: center; gap: 10px;
+        }
+        .fold-badge {
+            font-size: 11px; background: var(--bg-card); color: var(--text-secondary);
+            padding: 4px 10px; border-radius: 6px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            border: 1px solid var(--border);
+        }
+
+        /* FOLD 1 - 3 stat cards now */
+        .master-stats {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+        }
+        .master-stat-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; position: relative; overflow: hidden;
+        }
+        .master-stat-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0;
+            height: 3px; background: var(--orange);
+        }
+        .master-stat-card.green::before { background: var(--green); }
+        .master-stat-card.purple::before { background: var(--purple); }
+        .master-stat-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-bottom: 12px;
+        }
+        .master-stat-card.orange .master-stat-icon { background: rgba(255, 107, 53, 0.15); color: var(--orange); }
+        .master-stat-card.green .master-stat-icon { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+        .master-stat-card.purple .master-stat-icon { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
+        .master-stat-value { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+        .master-stat-label { color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+        .master-stat-sub {
+            color: var(--text-muted); font-size: 11px; margin-top: 8px;
+            display: flex; gap: 8px;
+        }
+
+        /* COMPARISON VIEW */
+        .platform-header-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;
+        }
+        .platform-title-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        }
+        .platform-title-card.reddit { border-top: 3px solid #ff6b35; }
+        .platform-title-card.quora { border-top: 3px solid #ef4444; }
+        .platform-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .platform-mini-stats-inline { display: flex; gap: 16px; }
+        .mini-stat-inline { text-align: center; }
+        .mini-stat-inline-value { font-size: 20px; font-weight: 700; }
+        .mini-stat-inline-label {
+            font-size: 10px; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        .comparison-section { margin-bottom: 20px; }
+        .comparison-label {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--text-secondary);
+        }
+        .comparison-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        }
+        .comparison-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px;
+        }
+        .comparison-card.reddit { border-left: 3px solid #ff6b35; }
+        .comparison-card.quora { border-left: 3px solid #ef4444; }
+        .comparison-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
+        .comparison-card-platform {
+            font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .comparison-card-period {
+            font-size: 10px; color: var(--text-muted); padding: 2px 8px;
+            background: var(--input-bg); border-radius: 4px;
+        }
+        .comparison-metrics {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+        }
+        .comparison-metric {
+            background: var(--input-bg); padding: 10px; border-radius: 6px;
+            text-align: center; border: 1px solid var(--border);
+        }
+        .comparison-metric label {
+            display: block; color: var(--text-secondary); font-size: 10px;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+        }
+        .comparison-metric input {
+            background: transparent; border: none; color: var(--text-primary);
+            font-size: 16px; font-weight: 700; width: 100%; text-align: center;
+        }
+        .comparison-metric input:focus { 
+            outline: none; background: var(--bg-card);
+            border-radius: 4px; padding: 2px;
+        }
+        .comparison-metric.readonly input { color: var(--orange); cursor: not-allowed; }
+        .comparison-metric.readonly { background: rgba(255, 107, 53, 0.05); border-color: rgba(255, 107, 53, 0.2); }
+
+        /* CHARTS */
+        .charts-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+        }
+        .chart-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px;
+        }
+        .chart-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px; gap: 10px; flex-wrap: wrap;
+        }
+        .chart-card-header h3 {
+            font-size: 14px; color: var(--text-secondary); font-weight: 500;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .chart-controls {
+            display: flex; gap: 6px; flex-wrap: wrap;
+        }
+        .chart-control-select {
+            background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 6px; padding: 4px 8px; color: var(--text-primary);
+            font-size: 11px; cursor: pointer;
+        }
+        .chart-control-select:focus { outline: none; border-color: var(--orange); }
+        .chart-wrapper { position: relative; height: 280px; }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        
+        .custom-date-row {
+            display: none; gap: 6px; margin-top: 8px;
+        }
+        .custom-date-row.active { display: flex; }
+        .custom-date-row input {
+            background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 6px; padding: 4px 8px; color: var(--text-primary);
+            font-size: 11px;
+        }
+
+        /* COMPARISON BAR CHART for fold 2 */
+        .platform-bar-chart-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; margin-top: 20px;
+        }
+        .platform-bar-chart-card h3 {
+            font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;
+        }
+        .bar-chart-wrapper { position: relative; height: 320px; }
+
+        /* TOP POSTS */
+        .top-post-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px; border-bottom: 1px solid var(--border);
+        }
+        .top-post-item:hover { background: var(--bg-hover); }
+        .top-post-item:last-child { border-bottom: none; }
+        .top-post-rank {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--input-bg); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; flex-shrink: 0;
+        }
+        .top-post-rank.gold { background: rgba(245, 158, 11, 0.2); color: var(--yellow); border-color: var(--yellow); }
+        .top-post-rank.silver { background: rgba(156, 163, 175, 0.2); color: #d1d5db; border-color: #9ca3af; }
+        .top-post-rank.bronze { background: rgba(180, 83, 9, 0.2); color: #fbbf24; border-color: #b45309; }
+        .top-post-content { flex: 1; min-width: 0; }
+        .top-post-title {
+            font-size: 13px; font-weight: 500; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .top-post-meta {
+            display: flex; gap: 12px; margin-top: 4px;
+            font-size: 11px; color: var(--text-muted);
+        }
+        .top-post-stats { display: flex; gap: 12px; flex-shrink: 0; }
+        .top-post-stat { text-align: center; font-size: 11px; }
+        .top-post-stat strong { display: block; font-size: 14px; color: var(--text-primary); }
+
+        /* COMMUNITY METRICS */
+        .community-table {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden;
+        }
+
+        /* TABLES */
+        .filters {
+            display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+        }
+        .search-wrapper { position: relative; flex: 1; min-width: 240px; }
+        .search-wrapper i {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted);
+        }
+        .search-wrapper input {
+            width: 100%; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 16px 10px 40px; color: var(--text-primary); font-size: 14px;
+        }
+        .filter-select {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 16px; color: var(--text-primary);
+            font-size: 14px; cursor: pointer; min-width: 140px;
+        }
+        .table-container {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; overflow: hidden; margin-bottom: 20px;
+        }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: var(--bg-hover); padding: 12px 16px; text-align: left;
+            font-size: 12px; font-weight: 600; text-transform: uppercase;
+            color: var(--text-secondary); letter-spacing: 0.5px; white-space: nowrap;
+        }
+        td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+        tr:hover { background: var(--bg-hover); }
+        .badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+            border-radius: 6px; font-size: 12px; font-weight: 600;
+        }
+        .badge.reddit { background: rgba(255, 69, 0, 0.15); color: #ff6b35; }
+        .badge.quora { background: rgba(185, 46, 39, 0.15); color: #ef4444; }
+        .badge.draft-type { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
+        .badge.in-progress { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+        .badge.admin { background: rgba(255, 107, 53, 0.15); color: var(--orange); }
+        .badge.member { background: rgba(107, 114, 128, 0.15); color: var(--text-secondary); }
+        .owner-tag { display: inline-flex; align-items: center; gap: 8px; }
+        .owner-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: bold; color: white;
+        }
+        .action-btns { display: flex; gap: 6px; }
+        .icon-btn {
+            width: 32px; height: 32px; border-radius: 6px;
+            background: var(--bg-hover); border: 1px solid var(--border);
+            color: var(--text-secondary); cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .icon-btn:hover { color: var(--text-primary); background: var(--input-bg); }
+        .icon-btn.delete:hover { color: var(--red); border-color: var(--red); }
+        .editable-input {
+            background: transparent; border: 1px solid transparent;
+            color: var(--text-primary); padding: 4px 8px;
+            border-radius: 4px; font-size: 13px; width: 80px;
+        }
+        .editable-input:hover, .editable-input:focus {
+            border-color: var(--border); background: var(--input-bg); outline: none;
+        }
+        .editable-input.date { width: 130px; }
+        .editable-input.community { width: 110px; }
+        .link-btn { color: var(--blue); text-decoration: none; font-size: 13px; }
+        .link-btn:hover { text-decoration: underline; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7); display: none;
+            align-items: center; justify-content: center; z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 24px; width: 90%;
+            max-width: 600px; max-height: 90vh; overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 20px; font-size: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; margin-bottom: 6px; font-size: 13px;
+            color: var(--text-secondary); font-weight: 500;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px 14px;
+            color: var(--text-primary); font-size: 14px; font-family: inherit;
+        }
+        .form-textarea { min-height: 80px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+        .view-tabs { display: none; }
+        .view-tabs.active { display: block; }
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background: var(--green); color: white; padding: 12px 20px;
+            border-radius: 8px; display: none; align-items: center;
+            gap: 10px; z-index: 2000; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .toast.active { display: flex; }
+        .truncate {
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            max-width: 280px; display: block;
+        }
+        @media (max-width: 1200px) {
+            .master-stats { grid-template-columns: 1fr; }
+            .platform-header-row { grid-template-columns: 1fr; }
+            .comparison-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 16px; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .seed-banner {
+            background: linear-gradient(135deg, var(--orange), #ff8c5a);
+            padding: 16px 20px; border-radius: 12px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center; color: white;
+        }
+        .seed-banner.hidden { display: none; }
+        .placeholder-note {
+            background: rgba(59, 130, 246, 0.1); border: 1px dashed var(--blue);
+            color: var(--blue); padding: 12px 16px; border-radius: 8px;
+            font-size: 13px;
+        }
+        .info-note {
+            background: rgba(255, 107, 53, 0.1); border: 1px solid rgba(255, 107, 53, 0.3);
+            color: var(--orange); padding: 10px 14px; border-radius: 8px;
+            font-size: 12px; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .team-member-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .team-member-info { flex: 1; }
+        .team-member-name { font-weight: 600; font-size: 15px; margin-bottom: 2px; }
+        .team-member-email { font-size: 12px; color: var(--text-secondary); }
+        .team-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;
+        }
+    </style>
+</head>
+<body data-theme="dark">
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">S</div>
+            <div class="logo-text">Spyne</div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Overview</div>
+            <div class="nav-item active" data-view="dashboard">
+                <i class="fas fa-chart-line"></i> Master Dashboard
+            </div>
+            <div class="nav-item" data-view="community">
+                <i class="fas fa-users-rays"></i> Community Metrics
+            </div>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-label">Reddit</div>
+            <div class="nav-item reddit-nav" data-view="reddit-engagements">
+                <i class="fas fa-list"></i> Engagements
+            </div>
+            <div class="nav-item reddit-nav" data-view="reddit-pipeline">
+                <i class="fas fa-stream"></i> Pipeline & Drafts
+            </div>
+        </div>
+        
+        <div class="nav-section">
+            <div class="nav-label">Quora</div>
+            <div class="nav-item quora-nav" data-view="quora-engagements">
+                <i class="fas fa-list"></i> Engagements
+            </div>
+            <div class="nav-item quora-nav" data-view="quora-pipeline">
+                <i class="fas fa-stream"></i> Pipeline & Drafts
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">My Team</div>
+            <div class="nav-item" data-view="team">
+                <i class="fas fa-users"></i> Team Members
+            </div>
+        </div>
+        
+        <div class="sidebar-footer" onclick="openProfileModal()">
+            <div class="avatar" id="userAvatar">AB</div>
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 13px; font-weight: 600;" id="userName">Loading...</div>
+                <div style="font-size: 11px; color: var(--text-muted);" id="userEmail">...</div>
+            </div>
+            <i class="fas fa-cog" style="color: var(--text-muted); font-size: 12px;"></i>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="seed-banner" id="seedBanner">
+            <div>
+                <div style="font-weight: 600; margin-bottom: 4px;">🚀 Welcome! Load Your Excel Data</div>
+                <div style="font-size: 13px; opacity: 0.9;">Click below to import all your data + metrics</div>
+            </div>
+            <button class="btn btn-secondary" onclick="seedDatabase()" style="background: white; color: var(--orange);">
+                <i class="fas fa-database"></i> Load Excel Data
+            </button>
+        </div>
+
+        <!-- MASTER DASHBOARD -->
+        <div class="view-tabs active" id="dashboard-view">
+            <div class="header">
+                <h1>📊 Master Dashboard</h1>
+                <div class="header-actions">
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FOLD 1: TOTAL METRICS (3 cards: Total / Live / Pipeline Items=combined) -->
+            <div class="fold">
+                <div class="fold-header">
+                    <h2><i class="fas fa-globe" style="color: var(--orange);"></i> Total Metrics</h2>
+                    <span class="fold-badge">Combined Overview</span>
+                </div>
+                <div class="master-stats">
+                    <div class="master-stat-card orange">
+                        <div class="master-stat-icon"><i class="fas fa-fire"></i></div>
+                        <div class="master-stat-value" id="total-engagements">0</div>
+                        <div class="master-stat-label">Total Engagements</div>
+                        <div class="master-stat-sub">
+                            <span><i class="fab fa-reddit" style="color: #ff6b35;"></i> <span id="reddit-mini">0</span></span>
+                            <span><i class="fab fa-quora" style="color: #ef4444;"></i> <span id="quora-mini">0</span></span>
+                        </div>
+                    </div>
+                    <div class="master-stat-card green">
+                        <div class="master-stat-icon"><i class="fas fa-circle-check"></i></div>
+                        <div class="master-stat-value" id="total-live">0</div>
+                        <div class="master-stat-label">Live Posts</div>
+                    </div>
+                    <div class="master-stat-card purple">
+                        <div class="master-stat-icon"><i class="fas fa-stream"></i></div>
+                        <div class="master-stat-value" id="total-pipeline">0</div>
+                        <div class="master-stat-label">Pipeline Items</div>
+                        <div class="master-stat-sub">
+                            <span>Pipeline: <span id="pipeline-only">0</span></span>
+                            <span>Drafts: <span id="drafts-only">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOLD 2: COMPARISON -->
+            <div class="fold">
+                <div class="fold-header">
+                    <h2><i class="fas fa-balance-scale" style="color: var(--blue);"></i> Platform Comparison</h2>
+                    <span class="fold-badge">Reddit vs Quora</span>
+                </div>
+                
+                <div class="platform-header-row">
+                    <div class="platform-title-card reddit">
+                        <div class="platform-title"><i class="fab fa-reddit" style="color: #ff6b35;"></i> Reddit</div>
+                        <div class="platform-mini-stats-inline">
+                            <div class="mini-stat-inline"><div class="mini-stat-inline-value" id="reddit-eng-count">0</div><div class="mini-stat-inline-label">Engagements</div></div>
+                            <div class="mini-stat-inline"><div class="mini-stat-inline-value" id="reddit-pipe-count">0</div><div class="mini-stat-inline-label">Pipeline</div></div>
+                            <div class="mini-stat-inline"><div class="mini-stat-inline-value" id="reddit-draft-count">0</div><div class="mini-stat-inline-label">Drafts</div></div>
+                        </div>
+                    </div>
+                    <div class="platform-title-card quora">
+                        <div class="platform-title"><i class="fab fa-quora" style="color: #ef4444;"></i> Quora</div>
+                        <div class="platform-mini-stats-inline">
+                            <div class="mini-stat-inline"><div class="mini-stat-inline-value" id="quora-eng-count">0</div><div class="mini-stat-inline-label">Engagements</div></div>
+                            <div class="mini-stat-inline"><div class="mini-stat-inline-value" id="quora-pipe-count">0</div><div class="mini-stat-inline-label">Pipeline</div></div>
+                            <div class="mini-stat-inline"><div class="mini-stat-inline-value" id="quora-draft-count">0</div><div class="mini-stat-inline-label">Drafts</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-note">
+                    <i class="fas fa-info-circle"></i> 
+                    <span>Updating any Monthly metric auto-updates the <strong>All Time</strong> total.</span>
+                </div>
+
+                <div id="comparisonSections"></div>
+            </div>
+
+            <!-- FOLD 3: ADVANCED CHARTS WITH FILTERS -->
+            <div class="fold">
+                <div class="fold-header">
+                    <h2><i class="fas fa-chart-bar" style="color: var(--purple);"></i> Reports & Trends</h2>
+                    <span class="fold-badge">Filterable Analytics</span>
+                </div>
+                <div class="charts-grid">
+                    <!-- Monthly Report -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> Monthly Report</h3>
+                            <div class="chart-controls">
+                                <select class="chart-control-select" id="monthlyMetric" onchange="loadChartData('monthly')">
+                                    <option value="views">Views</option>
+                                    <option value="upvotes">Upvotes</option>
+                                    <option value="contributions">Contributions</option>
+                                    <option value="posts">Posts Count</option>
+                                </select>
+                                <select class="chart-control-select" id="monthlyRange" onchange="onRangeChange('monthly')">
+                                    <option value="30d">Last 30 days</option>
+                                    <option value="90d" selected>Last 90 days</option>
+                                    <option value="custom">Custom range</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="custom-date-row" id="monthlyCustom">
+                            <input type="date" id="monthlyStart" onchange="loadChartData('monthly')">
+                            <input type="date" id="monthlyEnd" onchange="loadChartData('monthly')">
+                        </div>
+                        <div class="chart-wrapper"><canvas id="monthlyChart"></canvas></div>
+                    </div>
+
+                    <!-- Weekly Report -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-calendar-week"></i> Weekly Report</h3>
+                            <div class="chart-controls">
+                                <select class="chart-control-select" id="weeklyMetric" onchange="loadChartData('weekly')">
+                                    <option value="views">Views</option>
+                                    <option value="upvotes">Upvotes</option>
+                                    <option value="contributions">Contributions</option>
+                                    <option value="posts">Posts Count</option>
+                                </select>
+                                <select class="chart-control-select" id="weeklyRange" onchange="onRangeChange('weekly')">
+                                    <option value="7d">Last 7 days</option>
+                                    <option value="15d" selected>Last 15 days</option>
+                                    <option value="30d">Last 30 days</option>
+                                    <option value="custom">Custom range</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="custom-date-row" id="weeklyCustom">
+                            <input type="date" id="weeklyStart" onchange="loadChartData('weekly')">
+                            <input type="date" id="weeklyEnd" onchange="loadChartData('weekly')">
+                        </div>
+                        <div class="chart-wrapper"><canvas id="weeklyChart"></canvas></div>
+                    </div>
+
+                    <div class="chart-card full-width">
+                        <div class="chart-card-header">
+                            <h3><i class="fas fa-trophy" style="color: var(--yellow);"></i> Top Performing Posts</h3>
+                            <span style="font-size: 11px; color: var(--text-muted);">Score = views/100 + upvotes + comments</span>
+                        </div>
+                        <div id="topPostsList">
+                            <div class="placeholder-note">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>Coming soon!</strong> Add engagement metrics to your posts to see top performers here.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMMUNITY METRICS VIEW -->
+        <div class="view-tabs" id="community-view">
+            <div class="header">
+                <h1><i class="fas fa-users-rays" style="color: var(--orange);"></i> Reddit Community Metrics</h1>
+                <button class="btn btn-primary" onclick="openCommunityModal()">
+                    <i class="fas fa-plus"></i> Add Community
+                </button>
+            </div>
+            <div class="info-note">
+                <i class="fas fa-info-circle"></i> 
+                <span>Tracks subreddit communities. Posts auto-update from your Reddit engagements.</span>
+            </div>
+            <div class="table-container"><div class="table-wrapper">
+                <table>
+                    <thead><tr>
+                        <th>Community</th><th>Period</th><th>Posts</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="communityTable"></tbody>
+                </table>
+            </div></div>
+        </div>
+
+        <!-- TEAM VIEW -->
+        <div class="view-tabs" id="team-view">
+            <div class="header">
+                <h1><i class="fas fa-users" style="color: var(--blue);"></i> My Team</h1>
+                <button class="btn btn-primary" onclick="openInviteModal()" id="inviteBtn" style="display: none;">
+                    <i class="fas fa-user-plus"></i> Add Team Member
+                </button>
+            </div>
+            <div class="team-grid" id="teamGrid"></div>
+        </div>
+
+        <!-- REDDIT ENGAGEMENTS -->
+        <div class="view-tabs" id="reddit-engagements-view">
+            <div class="header">
+                <h1><i class="fab fa-reddit" style="color: #ff6b35;"></i> Reddit Engagements</h1>
+                <button class="btn btn-primary" onclick="openModal('engagement', 'Reddit')">
+                    <i class="fas fa-plus"></i> Add Engagement
+                </button>
+            </div>
+            <div class="filters">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="redditEngSearch" placeholder="Search..." oninput="renderEngagements('Reddit')">
+                </div>
+                <select class="filter-select" id="redditEngStatus" onchange="renderEngagements('Reddit')">
+                    <option value="">All Status</option>
+                    <option>Live</option><option>Pending</option><option>Draft</option><option>Archived</option>
+                </select>
+                <select class="filter-select" id="redditEngOwner" onchange="renderEngagements('Reddit')">
+                    <option value="">All Owners</option>
+                </select>
+            </div>
+            <div class="table-container"><div class="table-wrapper">
+                <table>
+                    <thead><tr>
+                        <th>Date ↓</th><th>Title</th><th>Community</th><th>Owner</th><th>Product</th>
+                        <th>Views</th><th>Upvotes</th><th>Comments</th>
+                        <th>Status</th><th>Link</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="redditEngTable"></tbody>
+                </table>
+            </div></div>
+        </div>
+
+        <div class="view-tabs" id="quora-engagements-view">
+            <div class="header">
+                <h1><i class="fab fa-quora" style="color: #ef4444;"></i> Quora Engagements</h1>
+                <button class="btn btn-primary" onclick="openModal('engagement', 'Quora')">
+                    <i class="fas fa-plus"></i> Add Engagement
+                </button>
+            </div>
+            <div class="filters">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="quoraEngSearch" placeholder="Search..." oninput="renderEngagements('Quora')">
+                </div>
+                <select class="filter-select" id="quoraEngStatus" onchange="renderEngagements('Quora')">
+                    <option value="">All Status</option>
+                    <option>Live</option><option>Pending</option><option>Draft</option><option>Archived</option>
+                </select>
+                <select class="filter-select" id="quoraEngOwner" onchange="renderEngagements('Quora')">
+                    <option value="">All Owners</option>
+                </select>
+            </div>
+            <div class="table-container"><div class="table-wrapper">
+                <table>
+                    <thead><tr>
+                        <th>Date ↓</th><th>Title</th><th>Community</th><th>Owner</th><th>Product</th>
+                        <th>Views</th><th>Upvotes</th><th>Comments</th>
+                        <th>Status</th><th>Link</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="quoraEngTable"></tbody>
+                </table>
+            </div></div>
+        </div>
+
+        <div class="view-tabs" id="reddit-pipeline-view">
+            <div class="header">
+                <h1><i class="fab fa-reddit" style="color: #ff6b35;"></i> Reddit Pipeline & Drafts</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="openModal('pipeline', 'Reddit', 'Draft')"><i class="fas fa-pen"></i> Add Draft</button>
+                    <button class="btn btn-primary" onclick="openModal('pipeline', 'Reddit', 'Pipeline')"><i class="fas fa-plus"></i> Add to Pipeline</button>
+                </div>
+            </div>
+            <div class="filters">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="redditPipeSearch" placeholder="Search..." oninput="renderPipeline('Reddit')">
+                </div>
+                <select class="filter-select" id="redditPipeType" onchange="renderPipeline('Reddit')">
+                    <option value="">All Types</option>
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Draft">Drafts</option>
+                </select>
+                <select class="filter-select" id="redditPipeStatus" onchange="renderPipeline('Reddit')">
+                    <option value="">All Status</option>
+                    <option>Not Picked</option><option>Picked</option>
+                    <option>In Progress</option><option>Live</option><option>Draft</option>
+                </select>
+            </div>
+            <div class="table-container"><div class="table-wrapper">
+                <table>
+                    <thead><tr>
+                        <th>Content / Topic</th><th>Type</th><th>Status</th>
+                        <th>Assigned To</th><th>Notes</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="redditPipeTable"></tbody>
+                </table>
+            </div></div>
+        </div>
+
+        <div class="view-tabs" id="quora-pipeline-view">
+            <div class="header">
+                <h1><i class="fab fa-quora" style="color: #ef4444;"></i> Quora Pipeline & Drafts</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="openModal('pipeline', 'Quora', 'Draft')"><i class="fas fa-pen"></i> Add Draft</button>
+                    <button class="btn btn-primary" onclick="openModal('pipeline', 'Quora', 'Pipeline')"><i class="fas fa-plus"></i> Add to Pipeline</button>
+                </div>
+            </div>
+            <div class="filters">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="quoraPipeSearch" placeholder="Search..." oninput="renderPipeline('Quora')">
+                </div>
+                <select class="filter-select" id="quoraPipeType" onchange="renderPipeline('Quora')">
+                    <option value="">All Types</option>
+                    <option value="Pipeline">Pipeline</option>
+                    <option value="Draft">Drafts</option>
+                </select>
+                <select class="filter-select" id="quoraPipeStatus" onchange="renderPipeline('Quora')">
+                    <option value="">All Status</option>
+                    <option>Not Picked</option><option>Picked</option>
+                    <option>In Progress</option><option>Live</option><option>Draft</option>
+                </select>
+            </div>
+            <div class="table-container"><div class="table-wrapper">
+                <table>
+                    <thead><tr>
+                        <th>Content / Topic</th><th>Type</th><th>Status</th>
+                        <th>Assigned To</th><th>Notes</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody id="quoraPipeTable"></tbody>
+                </table>
+            </div></div>
+        </div>
+    </main>
+
+    <!-- ENGAGEMENT MODAL -->
+    <div class="modal-overlay" id="engagementModal">
+        <div class="modal">
+            <h2 id="engagementModalTitle">Add Engagement</h2>
+            <input type="hidden" id="engagementId">
+            <input type="hidden" id="form-platform">
+            <div class="form-group"><label>Title *</label><input type="text" class="form-input" id="form-title"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Post Date</label><input type="date" class="form-input" id="form-post-date"></div>
+                <div class="form-group"><label>Community (e.g., r/automation)</label><input type="text" class="form-input" id="form-community"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Owner</label><input type="text" class="form-input" id="form-owner"></div>
+                <div class="form-group"><label>Status</label>
+                    <select class="form-select" id="form-status">
+                        <option>Live</option><option>Pending</option><option>Draft</option><option>Archived</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group"><label>Product Target</label><input type="text" class="form-input" id="form-product"></div>
+            <div class="form-group"><label>Engagement Link</label><input type="text" class="form-input" id="form-engagement-link"></div>
+            <div class="form-group"><label>Original Question Link</label><input type="text" class="form-input" id="form-question-link"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Views</label><input type="number" class="form-input" id="form-views" min="0"></div>
+                <div class="form-group"><label>Upvotes</label><input type="number" class="form-input" id="form-upvotes" min="0"></div>
+            </div>
+            <div class="form-group"><label>Comments</label><input type="number" class="form-input" id="form-comments" min="0"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('engagement')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEngagement()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIPELINE MODAL -->
+    <div class="modal-overlay" id="pipelineModal">
+        <div class="modal">
+            <h2 id="pipelineModalTitle">Add Item</h2>
+            <input type="hidden" id="pipelineId">
+            <input type="hidden" id="pform-platform">
+            <input type="hidden" id="pform-itemtype">
+            <div class="form-group"><label>Content / Topic *</label><textarea class="form-textarea" id="pform-content"></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label>Status</label>
+                    <select class="form-select" id="pform-status">
+                        <option>Not Picked</option><option>Picked</option>
+                        <option>In Progress</option><option>Live</option><option>Draft</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Assigned To</label><input type="text" class="form-input" id="pform-assigned"></div>
+            </div>
+            <div class="form-group"><label>Notes</label><textarea class="form-textarea" id="pform-notes"></textarea></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('pipeline')">Cancel</button>
+                <button class="btn btn-primary" onclick="savePipeline()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMUNITY MODAL -->
+    <div class="modal-overlay" id="communityModal">
+        <div class="modal">
+            <h2 id="communityModalTitle">Add Community Metric</h2>
+            <input type="hidden" id="communityId">
+            <div class="form-row">
+                <div class="form-group"><label>Community *</label><input type="text" class="form-input" id="cform-name" placeholder="r/automation"></div>
+                <div class="form-group"><label>Period</label><input type="text" class="form-input" id="cform-period" placeholder="All Time / April 2026"></div>
+            </div>
+            <div class="form-group"><label>Posts Count</label><input type="number" class="form-input" id="cform-posts" min="0" value="0"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('community')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCommunity()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <h2>My Profile</h2>
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px;">
+                <div class="avatar" style="width: 60px; height: 60px; font-size: 22px;" id="profileAvatar">AB</div>
+                <div>
+                    <div style="font-size: 18px; font-weight: 600;" id="profileFullName">Name</div>
+                    <div style="color: var(--text-secondary); font-size: 13px;" id="profileFullEmail">email</div>
+                    <div style="margin-top: 6px;"><span class="badge" id="profileRoleBadge">Member</span></div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Display Name</label>
+                <input type="text" class="form-input" id="profileName">
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" class="form-input" id="profilePassword" placeholder="Leave blank to keep current">
+            </div>
+            <div class="form-group">
+                <label>Avatar Color</label>
+                <input type="color" class="form-input" id="profileColor" style="height: 48px; padding: 4px;">
+            </div>
+            <div class="form-group">
+                <label>Theme</label>
+                <select class="form-select" id="profileTheme">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="logout()" style="margin-right: auto; color: var(--red); border-color: var(--red);">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+                <button class="btn btn-secondary" onclick="closeModal('profile')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProfile()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVITE MODAL -->
+    <div class="modal-overlay" id="inviteModal">
+        <div class="modal">
+            <h2>Add Team Member</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+                Send these credentials to your team member. They can log in and change their password.
+            </p>
+            <div class="form-group"><label>Display Name *</label><input type="text" class="form-input" id="inviteName"></div>
+            <div class="form-group"><label>Email *</label><input type="email" class="form-input" id="inviteEmail"></div>
+            <div class="form-group"><label>Temporary Password *</label><input type="text" class="form-input" id="invitePassword" value="spyne123"></div>
+            <div class="form-group"><label>Role</label>
+                <select class="form-select" id="inviteRole">
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('invite')">Cancel</button>
+                <button class="btn btn-primary" onclick="inviteUser()">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toastMessage">Saved!</span></div>
+
+    <script>
+        let currentUser = null;
+        let dataStore = { Reddit: { engagements: [], pipeline: [] }, Quora: { engagements: [], pipeline: [] } };
+        let metricsStore = { Reddit: [], Quora: [] };
+        let communityStore = [];
+        let teamStore = [];
+        let charts = {};
+
+        async function init() {
+            await loadCurrentUser();
+            applyTheme(currentUser?.theme || 'dark');
+            await loadAll();
+            checkSeed();
+            setupNav();
+            loadChartData('monthly');
+            loadChartData('weekly');
+        }
+
+        async function loadCurrentUser() {
+            const res = await fetch('/api/auth/me');
+            if (res.ok) {
+                const data = await res.json();
+                currentUser = data.user;
+                document.getElementById('userName').textContent = currentUser.display_name || currentUser.email;
+                document.getElementById('userEmail').textContent = currentUser.email;
+                const av = document.getElementById('userAvatar');
+                av.textContent = getInitials(currentUser.display_name || currentUser.email);
+                av.style.background = currentUser.avatar_color || '#8b5cf6';
+                if (currentUser.role === 'admin') {
+                    document.getElementById('inviteBtn').style.display = 'inline-flex';
+                }
+            } else {
+                window.location.href = '/login';
+            }
+        }
+
+        function setupNav() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => switchView(item.dataset.view, item));
+            });
+        }
+
+        async function checkSeed() {
+            const r = await fetch('/api/master-stats').then(r => r.json());
+            if (r.combined.total > 0) document.getElementById('seedBanner').classList.add('hidden');
+        }
+
+        async function loadAll() {
+            await Promise.all([
+                loadEngagements('Reddit'),
+                loadEngagements('Quora'),
+                loadPipeline('Reddit'),
+                loadPipeline('Quora'),
+                loadMetrics('Reddit'),
+                loadMetrics('Quora'),
+                loadMasterStats(),
+                loadCommunity(),
+                loadTeam()
+            ]);
+            renderComparison();
+        }
+
+        async function loadMasterStats() {
+            const stats = await fetch('/api/master-stats').then(r => r.json());
+
+            document.getElementById('total-engagements').textContent = stats.combined.total;
+            document.getElementById('reddit-mini').textContent = stats.combined.reddit_count;
+            document.getElementById('quora-mini').textContent = stats.combined.quora_count;
+            document.getElementById('total-live').textContent = stats.combined.live_count;
+            document.getElementById('total-pipeline').textContent = stats.combined.pipeline_total;  // includes drafts
+            document.getElementById('pipeline-only').textContent = stats.combined.pipeline_total - stats.combined.drafts_count;
+            document.getElementById('drafts-only').textContent = stats.combined.drafts_count;
+
+            document.getElementById('reddit-eng-count').textContent = stats.reddit.total;
+            document.getElementById('reddit-pipe-count').textContent = stats.reddit.pipeline_total;
+            document.getElementById('reddit-draft-count').textContent = stats.reddit.drafts_count;
+            document.getElementById('quora-eng-count').textContent = stats.quora.total;
+            document.getElementById('quora-pipe-count').textContent = stats.quora.pipeline_total;
+            document.getElementById('quora-draft-count').textContent = stats.quora.drafts_count;
+
+            renderTopPosts(stats.top_posts);
+        }
+
+        function renderTopPosts(posts) {
+            const container = document.getElementById('topPostsList');
+            if (!posts || posts.length === 0) {
+                container.innerHTML = `<div class="placeholder-note"><i class="fas fa-info-circle"></i> <strong>Coming soon!</strong> Add engagement metrics to your posts to see top performers here.</div>`;
+                return;
+            }
+            container.innerHTML = posts.map((p, idx) => {
+                const rankClass = idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : '';
+                return `
+                    <div class="top-post-item">
+                        <div class="top-post-rank ${rankClass}">${idx + 1}</div>
+                        <div class="top-post-content">
+                            <div class="top-post-title">${p.engagement_link ? `<a href="${p.engagement_link}" target="_blank" style="color: var(--text-primary); text-decoration: none;">${escapeHtml(p.title || '-')}</a>` : escapeHtml(p.title || '-')}</div>
+                            <div class="top-post-meta">
+                                <span class="badge ${p.platform.toLowerCase()}" style="padding: 1px 6px; font-size: 10px;"><i class="fab fa-${p.platform.toLowerCase()}"></i> ${p.platform}</span>
+                                <span><i class="fas fa-user" style="opacity: 0.6;"></i> ${p.owner || 'Unknown'}</span>
+                            </div>
+                        </div>
+                        <div class="top-post-stats">
+                            <div class="top-post-stat"><strong>${p.views.toLocaleString()}</strong><span>Views</span></div>
+                            <div class="top-post-stat"><strong>${p.upvotes}</strong><span>Upvotes</span></div>
+                            <div class="top-post-stat"><strong>${p.comments}</strong><span>Comments</span></div>
+                            <div class="top-post-stat"><strong style="color: var(--orange);">${p.engagement_score}</strong><span>Score</span></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ===== ADVANCED CHARTS WITH FILTERS =====
+        function onRangeChange(chart) {
+            const range = document.getElementById(chart + 'Range').value;
+            document.getElementById(chart + 'Custom').classList.toggle('active', range === 'custom');
+            if (range !== 'custom') loadChartData(chart);
+        }
+
+        async function loadChartData(chart) {
+            const metric = document.getElementById(chart + 'Metric').value;
+            const range = document.getElementById(chart + 'Range').value;
+            const groupby = chart === 'monthly' ? 'month' : 'day';
+            const startDate = document.getElementById(chart + 'Start').value;
+            const endDate = document.getElementById(chart + 'End').value;
+            
+            let url = `/api/chart-data?metric=${metric}&range=${range}&groupby=${groupby}`;
+            if (range === 'custom' && startDate && endDate) {
+                url += `&start_date=${startDate}&end_date=${endDate}`;
+            }
+            
+            const data = await fetch(url).then(r => r.json());
+            
+            const metricLabel = metric.charAt(0).toUpperCase() + metric.slice(1);
+            
+            renderChart(chart + 'Chart', chart === 'monthly' ? 'bar' : 'line', {
+                labels: data.labels,
+                datasets: [
+                    { 
+                        label: `Reddit ${metricLabel}`, 
+                        data: data.reddit, 
+                        backgroundColor: chart === 'weekly' ? 'rgba(255, 107, 53, 0.1)' : '#ff6b35',
+                        borderColor: '#ff6b35', tension: 0.4, fill: chart === 'weekly'
+                    },
+                    { 
+                        label: `Quora ${metricLabel}`, 
+                        data: data.quora,
+                        backgroundColor: chart === 'weekly' ? 'rgba(239, 68, 68, 0.1)' : '#ef4444',
+                        borderColor: '#ef4444', tension: 0.4, fill: chart === 'weekly'
+                    }
+                ]
+            });
+        }
+
+        function renderChart(id, type, data) {
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            if (charts[id]) charts[id].destroy();
+            const textColor = document.body.dataset.theme === 'light' ? '#64748b' : '#9ca3af';
+            const gridColor = document.body.dataset.theme === 'light' ? '#e2e8f0' : '#2a2a2f';
+            charts[id] = new Chart(ctx, {
+                type, data,
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 12, font: { size: 11 } } } },
+                    scales: (type === 'bar' || type === 'line') ? {
+                        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                        y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
+                    } : {}
+                }
+            });
+        }
+
+        // ===== COMPARISON =====
+        function renderComparison() {
+            const container = document.getElementById('comparisonSections');
+            const allPeriods = new Set();
+            [...metricsStore.Reddit, ...metricsStore.Quora].forEach(m => {
+                // Skip "Previous Months" - removed as requested
+                if (m.period_label !== 'Previous Months') {
+                    allPeriods.add(m.period_label);
+                }
+            });
+            const sortedPeriods = Array.from(allPeriods).sort((a, b) => {
+                if (a === 'All Time') return -1;
+                if (b === 'All Time') return 1;
+                // Sort other periods chronologically (newest first)
+                return b.localeCompare(a);
+            });
+
+            container.innerHTML = sortedPeriods.map(period => {
+                const reddit = metricsStore.Reddit.find(m => m.period_label === period);
+                const quora = metricsStore.Quora.find(m => m.period_label === period);
+                const periodType = reddit?.period_type || quora?.period_type || 'Monthly';
+                const isAllTime = periodType === 'Total';
+                return `
+                    <div class="comparison-section">
+                        <div class="comparison-label">
+                            <i class="fas fa-${isAllTime ? 'star' : 'calendar'}" style="color: ${isAllTime ? 'var(--orange)' : 'var(--blue)'};"></i>
+                            ${escapeHtml(period)} 
+                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 4px;">(${periodType}${isAllTime ? ' — auto-calculated' : ''})</span>
+                        </div>
+                        <div class="comparison-row">
+                            ${renderComparisonCard('Reddit', reddit, isAllTime)}
+                            ${renderComparisonCard('Quora', quora, isAllTime)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderComparisonCard(platform, metric, isAllTime) {
+            if (!metric) {
+                return `<div class="comparison-card ${platform.toLowerCase()}" style="opacity: 0.4;">
+                    <div class="comparison-card-header">
+                        <div class="comparison-card-platform"><i class="fab fa-${platform.toLowerCase()}" style="color: ${platform === 'Reddit' ? '#ff6b35' : '#ef4444'};"></i> ${platform}</div>
+                        <span class="comparison-card-period">No data</span>
+                    </div>
+                </div>`;
+            }
+            const readonlyClass = isAllTime ? 'readonly' : '';
+            const readonlyAttr = isAllTime ? 'readonly' : '';
+            return `
+                <div class="comparison-card ${platform.toLowerCase()}">
+                    <div class="comparison-card-header">
+                        <div class="comparison-card-platform"><i class="fab fa-${platform.toLowerCase()}" style="color: ${platform === 'Reddit' ? '#ff6b35' : '#ef4444'};"></i> ${platform}</div>
+                        <span class="comparison-card-period">${metric.period_type}</span>
+                    </div>
+                    <div class="comparison-metrics">
+                        <div class="comparison-metric ${readonlyClass}"><label><i class="fas fa-eye"></i> Views</label>
+                            <input type="text" value="${metric.total_views || '0'}" ${readonlyAttr} ${!isAllTime ? `onchange="updateMetric(${metric.id}, 'total_views', this.value, '${platform}')"` : ''}></div>
+                        <div class="comparison-metric ${readonlyClass}"><label><i class="fas fa-arrow-up"></i> Karma</label>
+                            <input type="number" value="${metric.total_karma || 0}" ${readonlyAttr} ${!isAllTime ? `onchange="updateMetric(${metric.id}, 'total_karma', this.value, '${platform}')"` : ''}></div>
+                        <div class="comparison-metric ${readonlyClass}"><label><i class="fas fa-comments"></i> Contributions</label>
+                            <input type="number" value="${metric.total_contributions || 0}" ${readonlyAttr} ${!isAllTime ? `onchange="updateMetric(${metric.id}, 'total_contributions', this.value, '${platform}')"` : ''}></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ===== ENGAGEMENTS =====
+        async function loadEngagements(platform) {
+            const res = await fetch(`/api/engagements?platform=${platform}`);
+            dataStore[platform].engagements = await res.json();
+            renderEngagements(platform);
+            updateOwnerFilter(platform);
+        }
+
+        function renderEngagements(platform) {
+            const prefix = platform.toLowerCase() + 'Eng';
+            const search = (document.getElementById(prefix + 'Search')?.value || '').toLowerCase();
+            const status = document.getElementById(prefix + 'Status')?.value || '';
+            const owner = document.getElementById(prefix + 'Owner')?.value || '';
+            let filtered = dataStore[platform].engagements.filter(e => {
+                if (status && e.status !== status) return false;
+                if (owner && e.owner !== owner) return false;
+                if (search) {
+                    const t = ((e.title||'') + ' ' + (e.owner||'') + ' ' + (e.product_target||'') + ' ' + (e.community||'')).toLowerCase();
+                    if (!t.includes(search)) return false;
+                }
+                return true;
+            });
+            const tbody = document.getElementById(prefix + 'Table');
+            if (!tbody) return;
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-inbox"></i><p>No engagements</p></td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(e => `
+                <tr>
+                    <td><input type="date" class="editable-input date" value="${e.post_date || ''}" onchange="updateField(${e.id}, 'post_date', this.value, '${platform}')"></td>
+                    <td><span class="truncate" title="${escapeHtml(e.title)}">${escapeHtml(e.title || '-')}</span></td>
+                    <td><input type="text" class="editable-input community" value="${e.community || ''}" placeholder="r/..." onchange="updateField(${e.id}, 'community', this.value, '${platform}')"></td>
+                    <td><div class="owner-tag"><div class="owner-avatar">${getInitials(e.owner)}</div>${e.owner || '-'}</div></td>
+                    <td>${e.product_target || '-'}</td>
+                    <td><input type="number" class="editable-input" value="${e.views}" onchange="updateField(${e.id}, 'views', this.value, '${platform}')"></td>
+                    <td><input type="number" class="editable-input" value="${e.upvotes}" onchange="updateField(${e.id}, 'upvotes', this.value, '${platform}')"></td>
+                    <td><input type="number" class="editable-input" value="${e.comments}" onchange="updateField(${e.id}, 'comments', this.value, '${platform}')"></td>
+                    <td>
+                        <select class="filter-select" style="padding: 4px 8px; font-size: 12px; min-width: 90px;" onchange="updateField(${e.id}, 'status', this.value, '${platform}')">
+                            <option ${e.status === 'Live' ? 'selected' : ''}>Live</option>
+                            <option ${e.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option ${e.status === 'Draft' ? 'selected' : ''}>Draft</option>
+                            <option ${e.status === 'Archived' ? 'selected' : ''}>Archived</option>
+                        </select>
+                    </td>
+                    <td>${e.engagement_link ? `<a href="${e.engagement_link}" target="_blank" class="link-btn">View →</a>` : '-'}</td>
+                    <td><div class="action-btns">
+                        <button class="icon-btn" onclick="editEngagement(${e.id}, '${platform}')"><i class="fas fa-pen"></i></button>
+                        <button class="icon-btn delete" onclick="deleteEngagement(${e.id}, '${platform}')"><i class="fas fa-trash"></i></button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateOwnerFilter(platform) {
+            const owners = [...new Set(dataStore[platform].engagements.map(e => e.owner).filter(Boolean))];
+            const select = document.getElementById(platform.toLowerCase() + 'EngOwner');
+            if (select) {
+                select.innerHTML = '<option value="">All Owners</option>' + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+            }
+        }
+
+        async function updateField(id, field, value, platform) {
+            const data = {};
+            data[field] = ['views', 'upvotes', 'comments'].includes(field) ? parseInt(value) : value;
+            await fetch(`/api/engagements/${id}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            const idx = dataStore[platform].engagements.findIndex(e => e.id === id);
+            if (idx > -1) dataStore[platform].engagements[idx][field] = data[field];
+            if (field === 'post_date') await loadEngagements(platform);
+            // Auto-refresh monthly metrics + dashboard
+            await loadMetrics('Reddit');
+            await loadMetrics('Quora');
+            renderComparison();
+            await loadCommunity();
+            loadMasterStats();
+            loadChartData('monthly');
+            loadChartData('weekly');
+            showToast('Saved!');
+        }
+
+        function editEngagement(id, platform) {
+            const e = dataStore[platform].engagements.find(x => x.id === id);
+            if (!e) return;
+            document.getElementById('engagementId').value = e.id;
+            document.getElementById('form-platform').value = platform;
+            document.getElementById('engagementModalTitle').textContent = 'Edit Engagement';
+            document.getElementById('form-status').value = e.status || 'Live';
+            document.getElementById('form-title').value = e.title || '';
+            document.getElementById('form-owner').value = e.owner || '';
+            document.getElementById('form-product').value = e.product_target || '';
+            document.getElementById('form-post-date').value = e.post_date || '';
+            document.getElementById('form-community').value = e.community || '';
+            document.getElementById('form-engagement-link').value = e.engagement_link || '';
+            document.getElementById('form-question-link').value = e.original_question_link || '';
+            document.getElementById('form-views').value = e.views || 0;
+            document.getElementById('form-upvotes').value = e.upvotes || 0;
+            document.getElementById('form-comments').value = e.comments || 0;
+            document.getElementById('engagementModal').classList.add('active');
+        }
+
+        async function deleteEngagement(id, platform) {
+            if (!confirm('Delete this engagement?')) return;
+            await fetch(`/api/engagements/${id}`, {method: 'DELETE'});
+            await loadEngagements(platform);
+            await loadMetrics('Reddit');
+            await loadMetrics('Quora');
+            renderComparison();
+            await loadCommunity();
+            loadMasterStats();
+            loadChartData('monthly');
+            loadChartData('weekly');
+            showToast('Deleted!');
+        }
+
+        async function saveEngagement() {
+            const id = document.getElementById('engagementId').value;
+            const platform = document.getElementById('form-platform').value;
+            const data = {
+                platform, status: document.getElementById('form-status').value,
+                title: document.getElementById('form-title').value,
+                owner: document.getElementById('form-owner').value,
+                product_target: document.getElementById('form-product').value,
+                post_date: document.getElementById('form-post-date').value,
+                community: document.getElementById('form-community').value,
+                engagement_link: document.getElementById('form-engagement-link').value,
+                original_question_link: document.getElementById('form-question-link').value,
+                views: parseInt(document.getElementById('form-views').value) || 0,
+                upvotes: parseInt(document.getElementById('form-upvotes').value) || 0,
+                comments: parseInt(document.getElementById('form-comments').value) || 0
+            };
+            const url = id ? `/api/engagements/${id}` : '/api/engagements';
+            const method = id ? 'PUT' : 'POST';
+            await fetch(url, {method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+            closeModal('engagement');
+            await loadEngagements(platform);
+            await loadMetrics('Reddit');
+            await loadMetrics('Quora');
+            renderComparison();
+            await loadCommunity();
+            loadMasterStats();
+            loadChartData('monthly');
+            loadChartData('weekly');
+            showToast(id ? 'Updated!' : 'Added!');
+        }
+
+        // ===== PIPELINE =====
+        async function loadPipeline(platform) {
+            const res = await fetch(`/api/pipeline?platform=${platform}`);
+            dataStore[platform].pipeline = await res.json();
+            renderPipeline(platform);
+        }
+
+        function renderPipeline(platform) {
+            const prefix = platform.toLowerCase() + 'Pipe';
+            const search = (document.getElementById(prefix + 'Search')?.value || '').toLowerCase();
+            const status = document.getElementById(prefix + 'Status')?.value || '';
+            const itemType = document.getElementById(prefix + 'Type')?.value || '';
+            let filtered = dataStore[platform].pipeline.filter(p => {
+                if (status && p.status !== status) return false;
+                if (itemType && p.item_type !== itemType) return false;
+                if (search && !p.content.toLowerCase().includes(search)) return false;
+                return true;
+            });
+            const tbody = document.getElementById(prefix + 'Table');
+            if (!tbody) return;
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-inbox"></i><p>No items</p></td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(p => `
+                <tr>
+                    <td><span class="truncate" title="${escapeHtml(p.content)}">${escapeHtml(p.content || '-')}</span></td>
+                    <td><span class="badge ${p.item_type === 'Draft' ? 'draft-type' : 'in-progress'}">${p.item_type || 'Pipeline'}</span></td>
+                    <td>
+                        <select class="filter-select" style="padding: 4px 8px; font-size: 12px; min-width: 110px;" onchange="updatePipelineField(${p.id}, 'status', this.value, '${platform}')">
+                            <option ${p.status === 'Not Picked' ? 'selected' : ''}>Not Picked</option>
+                            <option ${p.status === 'Picked' ? 'selected' : ''}>Picked</option>
+                            <option ${p.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option ${p.status === 'Live' ? 'selected' : ''}>Live</option>
+                            <option ${p.status === 'Draft' ? 'selected' : ''}>Draft</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="editable-input" style="width: 120px;" value="${p.assigned_to || ''}" onchange="updatePipelineField(${p.id}, 'assigned_to', this.value, '${platform}')" placeholder="Assign..."></td>
+                    <td><input type="text" class="editable-input" style="width: 200px;" value="${p.notes || ''}" onchange="updatePipelineField(${p.id}, 'notes', this.value, '${platform}')" placeholder="Notes..."></td>
+                    <td><div class="action-btns">
+                        <button class="icon-btn" style="background: rgba(16, 185, 129, 0.15); color: var(--green); border-color: var(--green);" title="Pick & move to Engagements" onclick="pickFromPipeline(${p.id}, '${platform}')"><i class="fas fa-check"></i></button>
+                        <button class="icon-btn delete" onclick="deletePipeline(${p.id}, '${platform}')"><i class="fas fa-trash"></i></button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        async function pickFromPipeline(id, platform) {
+            if (!confirm('Pick this item and move to Engagements?')) return;
+            const res = await fetch(`/api/pipeline/${id}/pick`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            if (res.ok) {
+                await loadPipeline(platform);
+                await loadEngagements(platform);
+                await loadMetrics('Reddit');
+                await loadMetrics('Quora');
+                renderComparison();
+                await loadCommunity();
+                loadMasterStats();
+                loadChartData('monthly');
+                loadChartData('weekly');
+                showToast('Picked! Added to Engagements ✅');
+            } else {
+                showToast('Failed', true);
+            }
+        }
+
+        async function updatePipelineField(id, field, value, platform) {
+            const data = {};
+            data[field] = value;
+            await fetch(`/api/pipeline/${id}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            const idx = dataStore[platform].pipeline.findIndex(p => p.id === id);
+            if (idx > -1) dataStore[platform].pipeline[idx][field] = value;
+            loadMasterStats();
+            showToast('Saved!');
+        }
+
+        async function deletePipeline(id, platform) {
+            if (!confirm('Delete this item?')) return;
+            await fetch(`/api/pipeline/${id}`, {method: 'DELETE'});
+            await loadPipeline(platform);
+            loadMasterStats();
+            showToast('Deleted!');
+        }
+
+        async function savePipeline() {
+            const platform = document.getElementById('pform-platform').value;
+            const data = {
+                content: document.getElementById('pform-content').value,
+                platform,
+                item_type: document.getElementById('pform-itemtype').value,
+                status: document.getElementById('pform-status').value,
+                assigned_to: document.getElementById('pform-assigned').value,
+                notes: document.getElementById('pform-notes').value
+            };
+            await fetch('/api/pipeline', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            closeModal('pipeline');
+            await loadPipeline(platform);
+            loadMasterStats();
+            showToast('Added!');
+        }
+
+        // ===== METRICS =====
+        async function loadMetrics(platform) {
+            const res = await fetch(`/api/metrics?platform=${platform}`);
+            metricsStore[platform] = await res.json();
+        }
+
+        async function updateMetric(id, field, value, platform) {
+            const data = {};
+            data[field] = (field === 'total_karma' || field === 'total_contributions') ? parseInt(value) || 0 : value;
+            await fetch(`/api/metrics/${id}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            await loadMetrics(platform);
+            renderComparison();
+            showToast('Metric updated!');
+        }
+
+        // ===== COMMUNITY =====
+        async function loadCommunity() {
+            const res = await fetch('/api/community-metrics');
+            communityStore = await res.json();
+            renderCommunity();
+        }
+
+        function renderCommunity() {
+            const tbody = document.getElementById('communityTable');
+            if (!tbody) return;
+            if (communityStore.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><i class="fas fa-inbox"></i><p>No communities tracked yet. They will populate as you add Reddit engagements.</p></td></tr>';
+                return;
+            }
+            tbody.innerHTML = communityStore.map(c => `
+                <tr>
+                    <td><span class="badge reddit"><i class="fab fa-reddit"></i> ${escapeHtml(c.community)}</span></td>
+                    <td><input type="text" class="editable-input" style="width: 130px;" value="${c.period_label || 'All Time'}" onchange="updateCommunity(${c.id}, 'period_label', this.value)"></td>
+                    <td><strong>${c.posts_count || 0}</strong> <span style="font-size: 11px; color: var(--text-muted);">(auto)</span></td>
+                    <td><div class="action-btns">
+                        <button class="icon-btn delete" onclick="deleteCommunity(${c.id})"><i class="fas fa-trash"></i></button>
+                    </div></td>
+                </tr>
+            `).join('');
+        }
+
+        async function updateCommunity(id, field, value) {
+            const data = {};
+            data[field] = ['views', 'upvotes', 'comments', 'posts_count'].includes(field) ? parseInt(value) || 0 : value;
+            await fetch(`/api/community-metrics/${id}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            const idx = communityStore.findIndex(c => c.id === id);
+            if (idx > -1) communityStore[idx][field] = data[field];
+            showToast('Saved!');
+        }
+
+        async function deleteCommunity(id) {
+            if (!confirm('Delete this community?')) return;
+            await fetch(`/api/community-metrics/${id}`, {method: 'DELETE'});
+            await loadCommunity();
+            showToast('Deleted!');
+        }
+
+        async function saveCommunity() {
+            const data = {
+                community: document.getElementById('cform-name').value,
+                period_label: document.getElementById('cform-period').value || 'All Time',
+                posts_count: parseInt(document.getElementById('cform-posts').value) || 0,
+            };
+            if (!data.community) { showToast('Community name required'); return; }
+            await fetch('/api/community-metrics', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+            closeModal('community');
+            await loadCommunity();
+            showToast('Added!');
+        }
+
+        function openCommunityModal() {
+            ['name','period','posts'].forEach(f => {
+                document.getElementById('cform-' + f).value = '';
+            });
+            document.getElementById('cform-period').value = 'All Time';
+            document.getElementById('cform-posts').value = '0';
+            document.getElementById('communityModal').classList.add('active');
+        }
+
+        // ===== TEAM =====
+        async function loadTeam() {
+            const res = await fetch('/api/team');
+            teamStore = await res.json();
+            renderTeam();
+        }
+
+        function renderTeam() {
+            const grid = document.getElementById('teamGrid');
+            if (!grid) return;
+            const isAdmin = currentUser?.role === 'admin';
+            grid.innerHTML = teamStore.map(u => `
+                <div class="team-member-card">
+                    <div class="avatar" style="width: 48px; height: 48px; font-size: 18px; background: ${u.avatar_color || '#8b5cf6'};">${getInitials(u.display_name || u.email)}</div>
+                    <div class="team-member-info">
+                        <div class="team-member-name">${escapeHtml(u.display_name || u.email)} ${u.id === currentUser?.id ? '<span style="font-size: 11px; color: var(--text-muted);">(you)</span>' : ''}</div>
+                        <div class="team-member-email">${escapeHtml(u.email)}</div>
+                        <div style="margin-top: 6px;"><span class="badge ${u.role === 'admin' ? 'admin' : 'member'}">${u.role === 'admin' ? '👑 Admin' : 'Member'}</span></div>
+                    </div>
+                    ${isAdmin && u.id !== currentUser?.id ? `
+                        <div class="action-btns">
+                            <button class="icon-btn" title="Toggle role" onclick="toggleRole(${u.id}, '${u.role === 'admin' ? 'member' : 'admin'}')"><i class="fas fa-user-shield"></i></button>
+                            <button class="icon-btn delete" onclick="deleteMember(${u.id})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        async function toggleRole(userId, newRole) {
+            await fetch(`/api/team/${userId}/role`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({role: newRole})
+            });
+            await loadTeam();
+            showToast('Role updated!');
+        }
+
+        async function deleteMember(userId) {
+            if (!confirm('Remove this team member?')) return;
+            const res = await fetch(`/api/team/${userId}`, {method: 'DELETE'});
+            if (res.ok) {
+                await loadTeam();
+                showToast('Removed!');
+            } else {
+                const d = await res.json();
+                showToast(d.error || 'Failed');
+            }
+        }
+
+        function openInviteModal() {
+            ['Name', 'Email', 'Password'].forEach(f => document.getElementById('invite' + f).value = f === 'Password' ? 'spyne123' : '');
+            document.getElementById('inviteRole').value = 'member';
+            document.getElementById('inviteModal').classList.add('active');
+        }
+
+        async function inviteUser() {
+            const data = {
+                display_name: document.getElementById('inviteName').value,
+                email: document.getElementById('inviteEmail').value,
+                password: document.getElementById('invitePassword').value,
+            };
+            if (!data.email || !data.password) { showToast('Email and password required'); return; }
+            
+            const role = document.getElementById('inviteRole').value;
+            
+            // Signup
+            const res = await fetch('/api/auth/signup', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                // Logout the auto-logged-in new user, restore admin session
+                // Actually we need a different approach - admin shouldn't lose session
+                // For simplicity, admin will need to re-login. Show info.
+                alert(`Account created for ${data.email}\n\nPassword: ${data.password}\n\nThey can now log in.`);
+                closeModal('invite');
+                // Re-login as admin if session got swapped
+                window.location.reload();
+            } else {
+                showToast(result.error || 'Failed');
+            }
+        }
+
+        // ===== PROFILE =====
+        function openProfileModal() {
+            document.getElementById('profileFullName').textContent = currentUser.display_name || currentUser.email;
+            document.getElementById('profileFullEmail').textContent = currentUser.email;
+            document.getElementById('profileName').value = currentUser.display_name || '';
+            document.getElementById('profileColor').value = currentUser.avatar_color || '#8b5cf6';
+            document.getElementById('profileTheme').value = currentUser.theme || 'dark';
+            document.getElementById('profilePassword').value = '';
+            const av = document.getElementById('profileAvatar');
+            av.textContent = getInitials(currentUser.display_name || currentUser.email);
+            av.style.background = currentUser.avatar_color || '#8b5cf6';
+            const roleBadge = document.getElementById('profileRoleBadge');
+            roleBadge.textContent = currentUser.role === 'admin' ? '👑 Admin' : 'Member';
+            roleBadge.className = 'badge ' + (currentUser.role === 'admin' ? 'admin' : 'member');
+            document.getElementById('profileModal').classList.add('active');
+        }
+
+        async function saveProfile() {
+            const data = {
+                display_name: document.getElementById('profileName').value,
+                avatar_color: document.getElementById('profileColor').value,
+                theme: document.getElementById('profileTheme').value,
+            };
+            const pwd = document.getElementById('profilePassword').value;
+            if (pwd) data.new_password = pwd;
+            
+            const res = await fetch('/api/auth/update-profile', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.success) {
+                currentUser = result.user;
+                applyTheme(currentUser.theme);
+                await loadCurrentUser();
+                closeModal('profile');
+                showToast('Profile updated!');
+            } else {
+                showToast('Failed to update');
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', {method: 'POST'});
+            window.location.href = '/login';
+        }
+
+        function applyTheme(theme) {
+            document.body.dataset.theme = theme;
+            document.getElementById('themeIcon').className = theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+            // Re-render charts with new colors
+            Object.keys(charts).forEach(k => { if (charts[k]) charts[k].destroy(); charts[k] = null; });
+            setTimeout(() => {
+                loadChartData('monthly');
+                loadChartData('weekly');
+            }, 100);
+        }
+
+        async function toggleTheme() {
+            const newTheme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            if (currentUser) {
+                await fetch('/api/auth/update-profile', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({theme: newTheme})
+                });
+                currentUser.theme = newTheme;
+            }
+        }
+
+        // ===== UI HELPERS =====
+        function switchView(view, item) {
+            document.querySelectorAll('.view-tabs').forEach(v => v.classList.remove('active'));
+            document.getElementById(view + '-view').classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (item) item.classList.add('active');
+        }
+
+        function openModal(type, platform, itemType) {
+            if (type === 'engagement') {
+                document.getElementById('engagementId').value = '';
+                document.getElementById('form-platform').value = platform;
+                document.getElementById('engagementModalTitle').textContent = 'Add ' + platform + ' Engagement';
+                ['title','owner','product','post-date','community','engagement-link','question-link'].forEach(f => {
+                    document.getElementById('form-' + f).value = '';
+                });
+                ['views','upvotes','comments'].forEach(f => document.getElementById('form-' + f).value = '0');
+                document.getElementById('form-status').value = 'Live';
+                document.getElementById('form-post-date').value = new Date().toISOString().split('T')[0];
+            } else if (type === 'pipeline') {
+                document.getElementById('pform-platform').value = platform;
+                document.getElementById('pform-itemtype').value = itemType;
+                document.getElementById('pipelineModalTitle').textContent = 'Add ' + platform + ' ' + itemType;
+                ['content','assigned','notes'].forEach(f => document.getElementById('pform-' + f).value = '');
+                document.getElementById('pform-status').value = itemType === 'Draft' ? 'Draft' : 'Not Picked';
+            }
+            document.getElementById(type + 'Modal').classList.add('active');
+        }
+
+        function closeModal(type) { document.getElementById(type + 'Modal').classList.remove('active'); }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.add('active');
+            setTimeout(() => toast.classList.remove('active'), 2000);
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(/[ @]/).filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function seedDatabase() {
+            showToast('Loading...');
+            const res = await fetch('/api/seed', {method: 'POST'});
+            const result = await res.json();
+            await loadAll();
+            document.getElementById('seedBanner').classList.add('hidden');
+            showToast(`Loaded ${result.engagements} engagements!`);
+        }
+
+        init();
+    </script>
+</body>
+</html>
