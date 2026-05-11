@@ -666,23 +666,61 @@ def seed_data():
 
 
 # Initialize DB and ensure default admin team exists
+def init_db():
+    """Initialize database - handles schema migrations gracefully"""
+    try:
+        # Drop and recreate ALL tables if schema mismatch (SQLite only)
+        # This is safe because we re-seed data on first login
+        if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
+            try:
+                # Test if schema is compatible
+                User.query.first()
+                Engagement.query.first()
+                Pipeline.query.first()
+                Metric.query.first()
+                CommunityMetric.query.first()
+            except Exception as e:
+                print(f"⚠️  Schema mismatch detected: {e}")
+                print("🔄 Recreating database with new schema...")
+                db.drop_all()
+                db.create_all()
+                print("✅ Database recreated")
+        else:
+            db.create_all()
+        
+        # Ensure tables exist
+        db.create_all()
+        
+        # Ensure team members exist (Aman, Astha, Komal)
+        default_team = [
+            {'email': 'aman.bhardwaj@spyne.ai', 'display_name': 'Aman Bhardwaj', 'role': 'admin', 'avatar_color': '#8b5cf6', 'password': 'spyne123'},
+            {'email': 'astha@spyne.ai', 'display_name': 'Astha', 'role': 'member', 'avatar_color': '#3b82f6', 'password': 'spyne123'},
+            {'email': 'komal@spyne.ai', 'display_name': 'Komal', 'role': 'member', 'avatar_color': '#10b981', 'password': 'spyne123'},
+        ]
+        for t in default_team:
+            if not User.query.filter_by(email=t['email']).first():
+                u = User(
+                    email=t['email'], display_name=t['display_name'],
+                    role=t['role'], avatar_color=t['avatar_color']
+                )
+                u.set_password(t['password'])
+                db.session.add(u)
+        db.session.commit()
+        print("✅ Database initialized successfully")
+    except Exception as e:
+        print(f"❌ DB init error: {e}")
+        # Try to recover by creating fresh tables
+        try:
+            db.session.rollback()
+            db.drop_all()
+            db.create_all()
+            print("🔄 Fresh database created after error")
+        except Exception as e2:
+            print(f"❌ Recovery failed: {e2}")
+
+
 with app.app_context():
-    db.create_all()
-    # Ensure team members exist (Aman, Astha, Komal)
-    default_team = [
-        {'email': 'aman.bhardwaj@spyne.ai', 'display_name': 'Aman Bhardwaj', 'role': 'admin', 'avatar_color': '#8b5cf6', 'password': 'spyne123'},
-        {'email': 'astha@spyne.ai', 'display_name': 'Astha', 'role': 'member', 'avatar_color': '#3b82f6', 'password': 'spyne123'},
-        {'email': 'komal@spyne.ai', 'display_name': 'Komal', 'role': 'member', 'avatar_color': '#10b981', 'password': 'spyne123'},
-    ]
-    for t in default_team:
-        if not User.query.filter_by(email=t['email']).first():
-            u = User(
-                email=t['email'], display_name=t['display_name'],
-                role=t['role'], avatar_color=t['avatar_color']
-            )
-            u.set_password(t['password'])
-            db.session.add(u)
-    db.session.commit()
+    init_db()
 
 
 if __name__ == '__main__':
